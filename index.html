@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>BMX</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
@@ -15,7 +16,7 @@
 
 <script>
 const supabaseUrl = "https://wthemojykufxrxhmudyq.supabase.co";
-const supabaseKey = "PASTE_ANON_KEY_HERE";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0aGVtb2p5a3VmeHJ4aG11ZHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMzQ1ODMsImV4cCI6MjA5MDcxMDU4M30.d57cpLLVM3CPLbt7yk-F3ZsvkoR0PYKVyvi35RiKtGE";
 
 const client = supabase.createClient(supabaseUrl, supabaseKey);
 
@@ -26,8 +27,8 @@ async function load(){
     .order("id", { ascending:false });
 
   if(error){
-    console.log("LOAD ERROR:", error);
-    document.getElementById("feed").innerHTML = "DB ERROR (check console)";
+    alert("LOAD ERROR: " + JSON.stringify(error));
+    console.log(error);
     return;
   }
 
@@ -38,15 +39,17 @@ function render(posts){
   let html = "";
 
   posts.forEach(p=>{
-    const id = getId(p.url);
+    const videoId = getId(p.url);
 
     html += `
       <div style="margin:10px;padding:10px;border:1px solid #333">
-        ${id
+        ${
+          videoId
           ? `<iframe width="100%" height="200"
-              src="https://www.youtube.com/embed/${id}"
+              src="https://www.youtube.com/embed/${videoId}"
               frameborder="0" allowfullscreen></iframe>`
-          : p.url}
+          : p.url
+        }
 
         <br>
 
@@ -69,7 +72,8 @@ async function addPost(){
     .insert([{ url, likes: 0 }]);
 
   if(error){
-    console.log("INSERT ERROR:", error);
+    alert("INSERT ERROR: " + JSON.stringify(error));
+    console.log(error);
     return;
   }
 
@@ -84,7 +88,8 @@ async function likePost(id, likes){
     .eq("id", id);
 
   if(error){
-    console.log("LIKE ERROR:", error);
+    alert("LIKE ERROR: " + JSON.stringify(error));
+    console.log(error);
     return;
   }
 
@@ -93,6 +98,7 @@ async function likePost(id, likes){
 
 function getId(url){
   if(!url) return null;
+
   const m = url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]+)/);
   return m ? m[1] : null;
 }
