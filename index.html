@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>BMX Community</title>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body { font-family: Arial; background:#111; color:white; text-align:center; }
-    input, button { padding:10px; margin:5px; width:300px; }
-    .post { background:#222; margin:10px auto; padding:10px; width:400px; border-radius:10px; }
-    iframe { width:100%; height:200px; }
+    input, button { padding:10px; margin:5px; width:320px; }
+    .post { background:#222; margin:10px auto; padding:10px; width:420px; border-radius:10px; }
+    iframe { width:100%; height:220px; border-radius:10px; }
   </style>
 </head>
 
@@ -18,24 +17,30 @@
 
 <h1>🚴 BMX COMMUNITY</h1>
 
-<input id="video" placeholder="paste YouTube link">
+<input id="video" placeholder="Paste YouTube link">
 <button onclick="addPost()">Post</button>
 
 <div id="feed"></div>
 
 <script>
 const supabase = supabase.createClient(
-  "YOUR_SUPABASE_URL",
-  "YOUR_SUPABASE_ANON_KEY"
+  "https://wthemojykufxrxhmudyq.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 )
 
 async function addPost(){
   const url = document.getElementById("video").value
+  if(!url) return
 
-  await supabase.from("posts").insert([{ url: url, likes: 0 }])
+  await supabase.from("posts").insert([{ url, likes: 0 }])
 
   document.getElementById("video").value = ""
   loadPosts()
+}
+
+function getVideoId(url){
+  const match = url.match(/v=([^&]+)/)
+  return match ? match[1] : url
 }
 
 async function like(id, likes){
@@ -46,24 +51,23 @@ async function like(id, likes){
   loadPosts()
 }
 
-function getId(url){
-  const match = url.match(/v=([^&]+)/)
-  return match ? match[1] : url
-}
-
 async function loadPosts(){
-  const { data } = await supabase.from("posts").select("*").order("id", { ascending:false })
+  const { data } = await supabase
+    .from("posts")
+    .select("*")
+    .order("id", { ascending:false })
 
-  document.getElementById("feed").innerHTML = ""
+  const feed = document.getElementById("feed")
+  feed.innerHTML = ""
 
   data.forEach(p => {
-    const videoId = getId(p.url)
+    const videoId = getVideoId(p.url)
 
-    document.getElementById("feed").innerHTML += `
+    feed.innerHTML += `
       <div class="post">
         <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
-        <p>❤️ ${p.likes}</p>
-        <button onclick="like(${p.id}, ${p.likes})">Like</button>
+        <p>❤️ ${p.likes || 0}</p>
+        <button onclick="like(${p.id}, ${p.likes || 0})">Like</button>
       </div>
     `
   })
