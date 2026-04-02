@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>BMX COMMUNITY</title>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     body {
       margin: 0;
@@ -85,69 +87,68 @@
 </div>
 
 <script>
-let posts = JSON.parse(localStorage.getItem("bmx_posts") || "[]");
+const supabase = supabase.createClient(
+  "https://wthemojykufxrxhmudyq.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0aGVtb2p5a3VmeHJ4aG11ZHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMzQ1ODMsImV4cCI6MjA5MDcxMDU4M30.d57cpLLVM3CPLbt7yk-F3ZsvkoR0PYKVyvi35RiKtGE"
+);
 
 function getYouTubeID(url) {
   const match = url.match(/(?:youtu\.be\/|v=)([\w-]+)/);
   return match ? match[1] : null;
 }
 
-function render() {
+async function loadPosts() {
+  const { data } = await supabase
+    .from("posts")
+    .select("*")
+    .order("id", { ascending: false });
+
   const feed = document.getElementById("feed");
   feed.innerHTML = "";
 
-  posts.forEach((p, i) => {
+  data.forEach(p => {
     const div = document.createElement("div");
     div.className = "post";
 
-    const videoId = getYouTubeID(p.text);
+    const videoId = getYouTubeID(p.url);
 
     div.innerHTML = `
-      ${videoId ? `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>` 
-                 : `<a href="${p.text}" target="_blank">${p.text}</a>`}
+      ${videoId 
+        ? `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`
+        : `<a href="${p.url}" target="_blank">${p.url}</a>`}
 
-      <div class="like ${p.liked ? 'liked' : ''}" onclick="toggleLike(${i})">
+      <div class="like" onclick="likePost(${p.id}, ${p.likes})">
         👍 Like (${p.likes})
       </div>
     `;
 
-    feed.prepend(div);
+    feed.appendChild(div);
   });
 }
 
-function addPost() {
+async function addPost() {
   const input = document.getElementById("input");
   if (!input.value) return;
 
-  posts.push({
-    text: input.value,
-    likes: 0,
-    liked: false
-  });
+  await supabase.from("posts").insert([{
+    url: input.value,
+    likes: 0
+  }]);
 
   input.value = "";
-  save();
-  render();
+  loadPosts();
 }
 
-function toggleLike(i) {
-  if (!posts[i].liked) {
-    posts[i].likes++;
-    posts[i].liked = true;
-  } else {
-    posts[i].likes--;
-    posts[i].liked = false;
-  }
+async function likePost(id, likes) {
+  await supabase
+    .from("posts")
+    .update({ likes: likes + 1 })
+    .eq("id", id);
 
-  save();
-  render();
+  loadPosts();
 }
 
-function save() {
-  localStorage.setItem("bmx_posts", JSON.stringify(posts));
-}
-
-render();
+loadPosts();
 </script>
 
 </body>
