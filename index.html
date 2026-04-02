@@ -67,10 +67,6 @@
       cursor: pointer;
       color: #aaa;
     }
-
-    .liked {
-      color: #ff3b3b;
-    }
   </style>
 </head>
 
@@ -115,15 +111,18 @@ async function loadPosts() {
   feed.innerHTML = "";
 
   data.forEach(p => {
+
+    const url = p.url;
+
+    const videoId = getYouTubeID(url);
+
     const div = document.createElement("div");
     div.className = "post";
-
-    const videoId = getYouTubeID(p.url);
 
     div.innerHTML = `
       ${videoId
         ? `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`
-        : `<a href="${p.url}" target="_blank">${p.url}</a>`}
+        : `<a href="${url}" target="_blank">${url}</a>`}
 
       <div class="like" onclick="likePost(${p.id}, ${p.likes})">
         👍 Like (${p.likes})
