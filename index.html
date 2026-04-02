@@ -1,130 +1,107 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>BMX COMMUNITY</title>
+<meta charset="UTF-8">
+<title>BMX COMMUNITY</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0f0f0f;
+  color: white;
+}
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #0f0f0f;
-      color: white;
-    }
+.container {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+}
 
-    header {
-      padding: 20px;
-      text-align: center;
-      font-size: 24px;
-      background: #111;
-      border-bottom: 1px solid #333;
-    }
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 6px;
+}
 
-    .container {
-      max-width: 600px;
-      margin: auto;
-      padding: 20px;
-    }
+button {
+  background: #ff3b3b;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
 
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 10px;
-      border: none;
-      border-radius: 6px;
-    }
+.post {
+  background: #1a1a1a;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 8px;
+}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #ff3b3b;
-      border: none;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 6px;
-    }
+iframe {
+  width: 100%;
+  height: 250px;
+  border-radius: 6px;
+}
 
-    .post {
-      background: #1a1a1a;
-      padding: 12px;
-      margin-top: 15px;
-      border-radius: 8px;
-    }
-
-    iframe {
-      width: 100%;
-      height: 300px;
-      margin-top: 10px;
-      border-radius: 8px;
-    }
-
-    .like {
-      margin-top: 10px;
-      cursor: pointer;
-      color: #aaa;
-    }
-  </style>
+.like {
+  margin-top: 8px;
+  cursor: pointer;
+  color: #aaa;
+}
+</style>
 </head>
 
 <body>
 
-<header>🔥 BMX COMMUNITY</header>
-
 <div class="container">
-
-  <input id="input" placeholder="Paste YouTube link...">
-  <button onclick="addPost()">Post</button>
-
+  <input id="input" placeholder="Paste YouTube link">
+  <button onclick="addPost()">POST</button>
   <div id="feed"></div>
-
 </div>
 
 <script>
-const client = supabase.createClient(
-  "https://wthemojykufxrxhmudyq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0aGVtb2p5a3VmeHJ4aG11ZHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMzQ1ODMsImV4cCI6MjA5MDcxMDU4M30.d57cpLLVM3CPLbt7yk-F3ZsvkoR0PYKVyvi35RiKtGE"
-);
+let posts = JSON.parse(localStorage.getItem("bmx_posts") || "[]");
 
-function getYouTubeID(url) {
+function getVideoId(url) {
   if (!url) return null;
 
-  const match = url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]+)/);
-  return match ? match[1] : null;
-}
+  const patterns = [
+    /youtu\.be\/([\w-]+)/,
+    /v=([\w-]+)/,
+    /shorts\/([\w-]+)/
+  ];
 
-async function loadPosts() {
-  const { data, error } = await client
-    .from("posts")
-    .select("*")
-    .order("id", { ascending: false });
-
-  if (error) {
-    console.log("LOAD ERROR:", error);
-    return;
+  for (let p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
   }
 
+  return null;
+}
+
+function save() {
+  localStorage.setItem("bmx_posts", JSON.stringify(posts));
+}
+
+function render() {
   const feed = document.getElementById("feed");
   feed.innerHTML = "";
 
-  data.forEach(p => {
-
-    const url = p.url;
-
-    const videoId = getYouTubeID(url);
+  posts.forEach((p, i) => {
+    const vid = getVideoId(p.url);
 
     const div = document.createElement("div");
     div.className = "post";
 
     div.innerHTML = `
-      ${videoId
-        ? `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`
-        : `<a href="${url}" target="_blank">${url}</a>`}
+      ${vid
+        ? `<iframe src="https://www.youtube.com/embed/${vid}" allowfullscreen></iframe>`
+        : `<a href="${p.url}" target="_blank">${p.url}</a>`}
 
-      <div class="like" onclick="likePost(${p.id}, ${p.likes})">
+      <div class="like" onclick="likePost(${i})">
         👍 Like (${p.likes})
       </div>
     `;
@@ -133,34 +110,29 @@ async function loadPosts() {
   });
 }
 
-async function addPost() {
+function addPost() {
   const input = document.getElementById("input");
-  if (!input.value) return;
+  const url = input.value.trim();
 
-  const { error } = await client.from("posts").insert([{
-    url: input.value,
+  if (!url) return;
+
+  posts.unshift({
+    url: url,
     likes: 0
-  }]);
-
-  if (error) {
-    console.log("INSERT ERROR:", error);
-    return;
-  }
+  });
 
   input.value = "";
-  loadPosts();
+  save();
+  render();
 }
 
-async function likePost(id, likes) {
-  await client
-    .from("posts")
-    .update({ likes: likes + 1 })
-    .eq("id", id);
-
-  loadPosts();
+function likePost(i) {
+  posts[i].likes++;
+  save();
+  render();
 }
 
-loadPosts();
+render();
 </script>
 
 </body>
