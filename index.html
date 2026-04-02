@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -87,21 +88,28 @@
 </div>
 
 <script>
-const supabase = supabase.createClient(
+const client = supabase.createClient(
   "https://wthemojykufxrxhmudyq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0aGVtb2p5a3VmeHJ4aG11ZHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMzQ1ODMsImV4cCI6MjA5MDcxMDU4M30.d57cpLLVM3CPLbt7yk-F3ZsvkoR0PYKVyvi35RiKtGE"
 );
 
 function getYouTubeID(url) {
-  const match = url.match(/(?:youtu\.be\/|v=)([\w-]+)/);
+  if (!url) return null;
+
+  const match = url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]+)/);
   return match ? match[1] : null;
 }
 
 async function loadPosts() {
-  const { data } = await supabase
+  const { data, error } = await client
     .from("posts")
     .select("*")
     .order("id", { ascending: false });
+
+  if (error) {
+    console.log("LOAD ERROR:", error);
+    return;
+  }
 
   const feed = document.getElementById("feed");
   feed.innerHTML = "";
@@ -113,7 +121,7 @@ async function loadPosts() {
     const videoId = getYouTubeID(p.url);
 
     div.innerHTML = `
-      ${videoId 
+      ${videoId
         ? `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`
         : `<a href="${p.url}" target="_blank">${p.url}</a>`}
 
@@ -130,17 +138,22 @@ async function addPost() {
   const input = document.getElementById("input");
   if (!input.value) return;
 
-  await supabase.from("posts").insert([{
+  const { error } = await client.from("posts").insert([{
     url: input.value,
     likes: 0
   }]);
+
+  if (error) {
+    console.log("INSERT ERROR:", error);
+    return;
+  }
 
   input.value = "";
   loadPosts();
 }
 
 async function likePost(id, likes) {
-  await supabase
+  await client
     .from("posts")
     .update({ likes: likes + 1 })
     .eq("id", id);
