@@ -2,78 +2,153 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>BMX Community</title>
+  <title>BMX COMMUNITY</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body { font-family: Arial; background:#111; color:white; text-align:center; }
-    input, button { padding:10px; margin:5px; width:320px; }
-    .post { background:#222; margin:10px auto; padding:10px; width:420px; border-radius:10px; }
-    iframe { width:100%; height:220px; border-radius:10px; }
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #0f0f0f;
+      color: white;
+    }
+
+    header {
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      background: #111;
+      border-bottom: 1px solid #333;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 6px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #ff3b3b;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .post {
+      background: #1a1a1a;
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 8px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 300px;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+
+    .like {
+      margin-top: 10px;
+      cursor: pointer;
+      color: #aaa;
+    }
+
+    .liked {
+      color: #ff3b3b;
+    }
   </style>
 </head>
 
 <body>
 
-<h1>🚴 BMX COMMUNITY</h1>
+<header>🔥 BMX COMMUNITY</header>
 
-<input id="video" placeholder="Paste YouTube link">
-<button onclick="addPost()">Post</button>
+<div class="container">
 
-<div id="feed"></div>
+  <input id="input" placeholder="Paste YouTube link...">
+  <button onclick="addPost()">Post</button>
+
+  <div id="feed"></div>
+
+</div>
 
 <script>
 const supabase = supabase.createClient(
   "https://wthemojykufxrxhmudyq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-)
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0aGVtb2p5a3VmeHJ4aG11ZHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMzQ1ODMsImV4cCI6MjA5MDcxMDU4M30.d57cpLLVM3CPLbt7yk-F3ZsvkoR0PYKVyvi35RiKtGE"
+);
 
-async function addPost(){
-  const url = document.getElementById("video").value
-  if(!url) return
-
-  await supabase.from("posts").insert([{ url, likes: 0 }])
-
-  document.getElementById("video").value = ""
-  loadPosts()
+function getYouTubeID(url) {
+  const match = url.match(/(?:youtu\.be\/|v=)([\w-]+)/);
+  return match ? match[1] : null;
 }
 
-function getVideoId(url){
-  const match = url.match(/v=([^&]+)/)
-  return match ? match[1] : url
-}
-
-async function like(id, likes){
-  await supabase.from("posts")
-    .update({ likes: likes + 1 })
-    .eq("id", id)
-
-  loadPosts()
-}
-
-async function loadPosts(){
+async function loadPosts() {
   const { data } = await supabase
     .from("posts")
     .select("*")
-    .order("id", { ascending:false })
+    .order("id", { ascending: false });
 
-  const feed = document.getElementById("feed")
-  feed.innerHTML = ""
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
 
   data.forEach(p => {
-    const videoId = getVideoId(p.url)
+    const div = document.createElement("div");
+    div.className = "post";
 
-    feed.innerHTML += `
-      <div class="post">
-        <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
-        <p>❤️ ${p.likes || 0}</p>
-        <button onclick="like(${p.id}, ${p.likes || 0})">Like</button>
+    const videoId = getYouTubeID(p.url);
+
+    div.innerHTML = `
+      ${videoId 
+        ? `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`
+        : `<a href="${p.url}" target="_blank">${p.url}</a>`}
+
+      <div class="like" onclick="likePost(${p.id}, ${p.likes})">
+        👍 Like (${p.likes})
       </div>
-    `
-  })
+    `;
+
+    feed.appendChild(div);
+  });
 }
 
-loadPosts()
+async function addPost() {
+  const input = document.getElementById("input");
+  if (!input.value) return;
+
+  await supabase.from("posts").insert([{
+    url: input.value,
+    likes: 0
+  }]);
+
+  input.value = "";
+  loadPosts();
+}
+
+async function likePost(id, likes) {
+  await supabase
+    .from("posts")
+    .update({ likes: likes + 1 })
+    .eq("id", id);
+
+  loadPosts();
+}
+
+loadPosts();
 </script>
 
 </body>
