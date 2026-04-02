@@ -1,143 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>BMX COMMUNITY</title>
+  <meta charset="UTF-8">
+  <title>BMX Community</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f0f0f;
-  color: white;
-}
-
-.container {
-  max-width: 600px;
-  margin: auto;
-  padding: 20px;
-}
-
-input, button {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 10px;
-  border: none;
-  border-radius: 6px;
-}
-
-button {
-  background: #ff3b3b;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.post {
-  background: #1a1a1a;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-}
-
-.like {
-  margin-top: 8px;
-  cursor: pointer;
-  color: #aaa;
-}
-</style>
+  <style>
+    body { font-family: Arial; background:#111; color:white; text-align:center; }
+    input, button { padding:10px; margin:5px; width:300px; }
+    .post { background:#222; margin:10px auto; padding:10px; width:400px; border-radius:10px; }
+    iframe { width:100%; height:200px; }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
-  <input id="input" placeholder="YouTube link">
-  <button onclick="addPost()">POST</button>
-  <div id="feed"></div>
-</div>
+<h1>🚴 BMX COMMUNITY</h1>
+
+<input id="video" placeholder="paste YouTube link">
+<button onclick="addPost()">Post</button>
+
+<div id="feed"></div>
 
 <script>
-const supabaseUrl = "SUPABASE_URL";
-const supabaseKey = "SUPABASE_ANON_KEY";
-const client = supabase.createClient(supabaseUrl, supabaseKey);
+const supabase = supabase.createClient(
+  "YOUR_SUPABASE_URL",
+  "YOUR_SUPABASE_ANON_KEY"
+)
 
-function getVideoId(url) {
-  const m = url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]+)/);
-  return m ? m[1] : null;
+async function addPost(){
+  const url = document.getElementById("video").value
+
+  await supabase.from("posts").insert([{ url: url, likes: 0 }])
+
+  document.getElementById("video").value = ""
+  loadPosts()
 }
 
-async function loadPosts() {
-  const { data, error } = await client
-    .from("posts")
-    .select("*")
-    .order("id", { ascending: false });
-
-  if (error) {
-    console.log(error);
-    return;
-  }
-
-  render(data);
-}
-
-function render(posts) {
-  const feed = document.getElementById("feed");
-  feed.innerHTML = "";
-
-  posts.forEach(p => {
-    const vid = getVideoId(p.url);
-
-    const div = document.createElement("div");
-    div.className = "post";
-
-    div.innerHTML = `
-      ${vid
-        ? `<iframe width="100%" height="250" src="https://www.youtube.com/embed/${vid}" frameborder="0" allowfullscreen></iframe>`
-        : `<a href="${p.url}" target="_blank">${p.url}</a>`}
-
-      <div class="like" onclick="likePost(${p.id}, ${p.likes || 0})">
-        👍 Like (${p.likes || 0})
-      </div>
-    `;
-
-    feed.appendChild(div);
-  });
-}
-
-async function addPost() {
-  const url = document.getElementById("input").value.trim();
-  if (!url) return;
-
-  const { error } = await client
-    .from("posts")
-    .insert([{ url, likes: 0 }]);
-
-  if (error) {
-    console.log(error);
-    return;
-  }
-
-  document.getElementById("input").value = "";
-  loadPosts();
-}
-
-async function likePost(id, likes) {
-  const { error } = await client
-    .from("posts")
+async function like(id, likes){
+  await supabase.from("posts")
     .update({ likes: likes + 1 })
-    .eq("id", id);
+    .eq("id", id)
 
-  if (error) {
-    console.log(error);
-    return;
-  }
-
-  loadPosts();
+  loadPosts()
 }
 
-loadPosts();
+function getId(url){
+  const match = url.match(/v=([^&]+)/)
+  return match ? match[1] : url
+}
+
+async function loadPosts(){
+  const { data } = await supabase.from("posts").select("*").order("id", { ascending:false })
+
+  document.getElementById("feed").innerHTML = ""
+
+  data.forEach(p => {
+    const videoId = getId(p.url)
+
+    document.getElementById("feed").innerHTML += `
+      <div class="post">
+        <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
+        <p>❤️ ${p.likes}</p>
+        <button onclick="like(${p.id}, ${p.likes})">Like</button>
+      </div>
+    `
+  })
+}
+
+loadPosts()
 </script>
 
 </body>
