@@ -14,21 +14,13 @@ body {
   color: white;
 }
 
-header {
-  padding: 20px;
-  text-align: center;
-  font-size: 24px;
-  background: #111;
-  border-bottom: 1px solid #333;
-}
-
 .container {
   max-width: 600px;
   margin: auto;
   padding: 20px;
 }
 
-input {
+input, button {
   width: 100%;
   padding: 12px;
   margin-bottom: 10px;
@@ -37,32 +29,21 @@ input {
 }
 
 button {
-  width: 100%;
-  padding: 12px;
   background: #ff3b3b;
-  border: none;
   color: white;
   font-weight: bold;
   cursor: pointer;
-  border-radius: 6px;
 }
 
 .post {
   background: #1a1a1a;
-  padding: 12px;
-  margin-top: 15px;
-  border-radius: 8px;
-}
-
-iframe {
-  width: 100%;
-  height: 300px;
+  padding: 10px;
   margin-top: 10px;
   border-radius: 8px;
 }
 
 .like {
-  margin-top: 10px;
+  margin-top: 8px;
   cursor: pointer;
   color: #aaa;
 }
@@ -71,15 +52,10 @@ iframe {
 
 <body>
 
-<header>🔥 BMX COMMUNITY</header>
-
 <div class="container">
-
-<input id="input" placeholder="Paste YouTube link...">
-<button onclick="addPost()">Post</button>
-
-<div id="feed"></div>
-
+  <input id="input" placeholder="YouTube link">
+  <button onclick="addPost()">POST</button>
+  <div id="feed"></div>
 </div>
 
 <script>
@@ -87,11 +63,9 @@ const supabaseUrl = "SUPABASE_URL";
 const supabaseKey = "SUPABASE_ANON_KEY";
 const client = supabase.createClient(supabaseUrl, supabaseKey);
 
-let posts = [];
-
-function getYouTubeID(url) {
-  const match = url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]+)/);
-  return match ? match[1] : null;
+function getVideoId(url) {
+  const m = url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]+)/);
+  return m ? m[1] : null;
 }
 
 async function loadPosts() {
@@ -101,29 +75,29 @@ async function loadPosts() {
     .order("id", { ascending: false });
 
   if (error) {
-    console.log("LOAD ERROR:", error);
+    console.log(error);
     return;
   }
 
-  posts = data;
-  render();
+  render(data);
 }
 
-function render() {
+function render(posts) {
   const feed = document.getElementById("feed");
   feed.innerHTML = "";
 
-  posts.forEach((p) => {
-    const videoId = getYouTubeID(p.url);
+  posts.forEach(p => {
+    const vid = getVideoId(p.url);
 
     const div = document.createElement("div");
     div.className = "post";
 
     div.innerHTML = `
-      ${videoId ? `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>` 
-                 : `<a href="${p.url}" target="_blank">${p.url}</a>`}
+      ${vid
+        ? `<iframe width="100%" height="250" src="https://www.youtube.com/embed/${vid}" frameborder="0" allowfullscreen></iframe>`
+        : `<a href="${p.url}" target="_blank">${p.url}</a>`}
 
-      <div class="like" onclick="toggleLike(${p.id}, ${p.likes || 0})">
+      <div class="like" onclick="likePost(${p.id}, ${p.likes || 0})">
         👍 Like (${p.likes || 0})
       </div>
     `;
@@ -133,9 +107,7 @@ function render() {
 }
 
 async function addPost() {
-  const input = document.getElementById("input");
-  const url = input.value.trim();
-
+  const url = document.getElementById("input").value.trim();
   if (!url) return;
 
   const { error } = await client
@@ -143,25 +115,22 @@ async function addPost() {
     .insert([{ url, likes: 0 }]);
 
   if (error) {
-    console.log("INSERT ERROR:", error);
-    alert(error.message);
+    console.log(error);
     return;
   }
 
-  input.value = "";
+  document.getElementById("input").value = "";
   loadPosts();
 }
 
-async function toggleLike(id, likes) {
-  const newLikes = (likes || 0) + 1;
-
+async function likePost(id, likes) {
   const { error } = await client
     .from("posts")
-    .update({ likes: newLikes })
+    .update({ likes: likes + 1 })
     .eq("id", id);
 
   if (error) {
-    console.log("LIKE ERROR:", error);
+    console.log(error);
     return;
   }
 
