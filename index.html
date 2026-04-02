@@ -1,42 +1,93 @@
 <!DOCTYPE html>
 <html>
+<head>
+<meta charset="UTF-8">
+<title>BMX</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+
 <body style="background:black;color:white;font-family:Arial">
 
-<input id="input" placeholder="link">
+<input id="input" placeholder="YouTube link">
 <button onclick="add()">POST</button>
 
 <div id="feed"></div>
 
 <script>
-let posts = JSON.parse(localStorage.getItem("p") || "[]");
+const supabaseUrl = "https://wthemojykufxrxhmudyq.supabase.co";
+const supabaseKey = "PASTE_ANON_KEY";
 
-function add(){
-  const val = document.getElementById("input").value;
-  posts.push({text: val, likes:0});
-  localStorage.setItem("p", JSON.stringify(posts));
-  render();
+const client = supabase.createClient(supabaseUrl, supabaseKey);
+
+async function load(){
+  const { data, error } = await client
+    .from("posts")
+    .select("*")
+    .order("id", { ascending:false });
+
+  if(error){
+    console.log(error);
+    return;
+  }
+
+  render(data);
 }
 
-function render(){
+function render(posts){
   let html = "";
-  posts.forEach((p,i)=>{
+
+  posts.forEach(p=>{
+    const videoId = getId(p.url);
+
     html += `
-      <div>
-        ${p.text}
-        <button onclick="like(${i})">👍 ${p.likes}</button>
+      <div style="margin:10px;padding:10px;border:1px solid #333">
+        ${
+          videoId
+          ? `<iframe width="100%" height="200"
+              src="https://www.youtube.com/embed/${videoId}"
+              frameborder="0"></iframe>`
+          : p.url
+        }
+
+        <br>
+
+        <button onclick="like(${p.id}, ${p.likes || 0})">
+          👍 ${p.likes || 0}
+        </button>
       </div>
     `;
   });
+
   document.getElementById("feed").innerHTML = html;
 }
 
-function like(i){
-  posts[i].likes++;
-  localStorage.setItem("p", JSON.stringify(posts));
-  render();
+async function add(){
+  const url = document.getElementById("input").value.trim();
+  if(!url) return;
+
+  await client
+    .from("posts")
+    .insert([{ url: url, likes: 0 }]);
+
+  document.getElementById("input").value = "";
+  load();
 }
 
-render();
+async function like(id, likes){
+  await client
+    .from("posts")
+    .update({ likes: likes + 1 })
+    .eq("id", id);
+
+  load();
+}
+
+function getId(url){
+  const m = url.match(/(?:youtu\.be\/|v=|shorts\/)([\w-]+)/);
+  return m ? m[1] : null;
+}
+
+load();
 </script>
 
 </body>
